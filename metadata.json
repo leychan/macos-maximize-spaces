@@ -1,0 +1,14 @@
+{
+  "KPackageStructure": "KWin/Script",
+  "KPlugin": {
+    "Id": "macos-maximize-spaces",
+    "Name": "macOS Maximize Spaces",
+    "Name[zh_CN]": "最大化窗口独立桌面",
+    "Description": "Move maximized windows to temporary desktops (KWin 6.7+)",
+    "Version": "1.0.0",
+    "License": "MIT",
+    "EnabledByDefault": false
+  },
+  "X-Plasma-API": "javascript",
+  "X-Plasma-MainScript": "code/main.js"
+}
