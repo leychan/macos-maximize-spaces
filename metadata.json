@@ -4,8 +4,9 @@
     "Id": "macos-maximize-spaces",
     "Name": "macOS Maximize Spaces",
     "Name[zh_CN]": "最大化窗口独立桌面",
-    "Description": "Move maximized windows to temporary desktops (KWin 6.7+)",
-    "Version": "1.0.0",
+    "Description": "Move maximized windows to temporary desktops and clean empty desktops at startup (KWin 6.7+)",
+    "Description[zh_CN]": "最大化窗口使用独立桌面，登录时自动清理空桌面（KWin 6.7+）",
+    "Version": "1.1.0",
     "License": "MIT",
     "EnabledByDefault": false
   },

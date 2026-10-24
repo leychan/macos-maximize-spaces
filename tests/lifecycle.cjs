@@ -7,7 +7,9 @@ function setup() {
  const home={name:'Home'}, windows=[];
  const ws={desktops:[home],currentDesktop:home,windowAdded:signal(),windowList:()=>windows,
  createDesktop(i,n){this.desktops.splice(i,0,{name:n});},removeDesktop(d){this.desktops=this.desktops.filter(x=>x!==d);}};
- vm.runInNewContext(source,{workspace:ws, console});
+ // Lifecycle tests do not advance the startup timer; startup timing is tested separately.
+ class QTimer { constructor() { this.timeout = signal(); } start() {} }
+ vm.runInNewContext(source,{workspace:ws, console, QTimer});
  function window() {
   const w={normalWindow:true, transient:false,onAllDesktops:false,minimized:false,maximizeMode:0,desktops:[ws.currentDesktop],caption:'Test',maximizedChanged:signal(),minimizedChanged:signal(),desktopsChanged:signal(),closed:signal()};
   windows.push(w);

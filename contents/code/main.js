@@ -4,10 +4,37 @@
     'use strict';
     const records = new Map();
     const watched = new Set();
+    const startupCleanupTimer = new QTimer();
+    let startupCleanupPending = true;
     let busy = false;
     function exists(d) { return workspace.desktops.indexOf(d) !== -1; }
     function fallback(r) {
         return r.original.filter(exists)[0] || workspace.desktops.filter(d => d !== r.desktop)[0];
+    }
+    function occupied(desktop, ignored) {
+        return workspace.windowList().some(w =>
+            w !== ignored && !w.deleted && !w.desktopWindow && !w.dock &&
+            !w.onAllDesktops && w.desktops.indexOf(desktop) !== -1);
+    }
+    function removeDesktop(desktop, target) {
+        if (!exists(desktop) || !exists(target) || desktop === target ||
+            workspace.desktops.length <= 1) return;
+        if (workspace.currentDesktop === desktop) workspace.currentDesktop = target;
+        workspace.removeDesktop(desktop);
+        if (exists(desktop)) return;
+        // Preserve return paths, including homes removed by startup cleanup.
+        records.forEach(r => {
+            r.original = r.original.map(d => d === desktop ? target : d);
+        });
+    }
+    function cleanupEmptyDesktops() {
+        const desktops = workspace.desktops.slice();
+        // Keep the current desktop when possible; if all are empty, keep it alone.
+        const target = desktops.filter(d => d === workspace.currentDesktop && occupied(d))[0] ||
+            desktops.filter(d => occupied(d))[0] || workspace.currentDesktop;
+        desktops.forEach(d => {
+            if (d !== target && !occupied(d)) removeDesktop(d, target);
+        });
     }
     function release(w, closed, restore) {
         const r = records.get(w);
@@ -22,16 +49,7 @@
         // A background window closing must not interrupt another desktop.
         if (workspace.currentDesktop === r.desktop) workspace.currentDesktop = target;
         // Keep a desktop if the user has moved other windows into it.
-        const occupied = workspace.windowList().some(other =>
-            other !== w && !other.deleted && !other.desktopWindow && !other.dock &&
-            !other.onAllDesktops && other.desktops.indexOf(r.desktop) !== -1);
-        if (exists(r.desktop) && !occupied && workspace.desktops.length > 1) {
-            // Preserve return paths when temporary desktops are nested.
-            records.forEach(other => {
-                other.original = other.original.map(d => d === r.desktop ? target : d);
-            });
-            workspace.removeDesktop(r.desktop);
-        }
+        if (!occupied(r.desktop, w)) removeDesktop(r.desktop, target);
     }
     function enter(w) {
         if (records.has(w) || !w.normalWindow || w.transient || w.onAllDesktops ||
@@ -87,7 +105,19 @@
         });
         if (isNew) update(w);
     }
-    workspace.windowAdded.connect(w => watch(w, true));
+    workspace.windowAdded.connect(w => {
+        // Let restored/autostart applications finish opening before checking emptiness.
+        if (startupCleanupPending) startupCleanupTimer.start();
+        watch(w, true);
+    });
     // Do not rearrange already-open windows just by enabling the script.
     workspace.windowList().forEach(w => watch(w, false));
+    // Run once per script load (login or manual re-enable), never on later closes.
+    startupCleanupTimer.interval = 30000;
+    startupCleanupTimer.singleShot = true;
+    startupCleanupTimer.timeout.connect(() => {
+        startupCleanupPending = false;
+        run(cleanupEmptyDesktops);
+    });
+    startupCleanupTimer.start();
 })();
